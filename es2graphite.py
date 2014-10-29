@@ -137,7 +137,7 @@ def get_metrics():
     dt = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     node_stats_suburl = '%s' % get_es_host()
     node_stats_authinfo = urllib2.HTTPPasswordMgrWithDefaultRealm()
-    node_stats_authinfo.add_password(None, node_stats_authinfo, USER, PASSWORD)
+    node_stats_authinfo.add_password(None, node_stats_suburl, USER, PASSWORD)
     node_stats_url = 'http://%s/_cluster/nodes/stats?all=true' % node_stats_suburl
     log('%s: GET %s' % (dt, node_stats_url))
     node_stats_handler = urllib2.HTTPBasicAuthHandler(node_stats_authinfo)
