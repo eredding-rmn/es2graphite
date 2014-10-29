@@ -18,6 +18,8 @@ CLUSTER_NAME = ''
 STATUS = {'red': 0, 'yellow': 1, 'green': 2}
 SHARD_STATE = {'CREATED': 0, 'RECOVERING': 1, 'STARTED': 2, 'RELOCATED': 3, 'CLOSED': 4}
 HOST_IDX = -1
+USER=''
+PASSWORD=''
 
 def log(what, force=False):
     if args.verbose or force:
@@ -48,7 +50,7 @@ def add_metric(metrics, prefix, stat, val, timestamp):
         metrics.append((normalize((prefix, stat)), (timestamp, STATUS[val])))
     elif stat == 'state' and val in SHARD_STATE:
         metrics.append((normalize((prefix, stat)), (timestamp, SHARD_STATE[val])))
-        
+
 def process_node_stats(prefix, stats):
     metrics = []
     global CLUSTER_NAME
@@ -68,18 +70,18 @@ def process_indices_status(prefix, status):
     metrics = []
     process_section(int(time.time()), metrics, (prefix, CLUSTER_NAME, 'indices'), status['indices'])
     return metrics
-    
+
 def process_indices_stats(prefix, stats):
     metrics = []
     process_section(int(time.time()), metrics, (prefix, CLUSTER_NAME, 'indices', '_all'), stats['_all'])
     process_section(int(time.time()), metrics, (prefix, CLUSTER_NAME, 'indices'), stats['indices'])
     return metrics
-    
+
 def process_segments_status(prefix, status):
     metrics = []
     process_section(int(time.time()), metrics, (prefix, CLUSTER_NAME, 'indices'), status['indices'])
     return metrics
-    
+
 def process_section(timestamp, metrics, prefix, section):
     for stat in section:
         stat_val = section[stat]
@@ -121,16 +123,33 @@ def send_to_graphite(metrics):
         sock.connect((args.graphite_host, args.graphite_port))
         sock.sendall('%s%s' % (header, payload))
         sock.close()
- 
-def get_metrics():
+
+def build_url_handler(suburl):
+    SERVER=suburl
+
+    authinfo
+    page = 'HTTP://'+SERVER+'/cgi-bin/tools/orders_waiting.py'
+
+    do_something(output)
+
+
+def get_metrics(authSession):
     dt = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    node_stats_url = 'http://%s/_cluster/nodes/stats?all=true' % get_es_host()
+    node_stats_suburl = '%s' % get_es_host()
+    node_stats_authinfo = urllib2.HTTPPasswordMgrWithDefaultRealm()
+    node_stats_authinfo.add_password(None, node_stats_authinfo, USER, PASSWORD)
+    node_stats_url = 'http://%s/_cluster/nodes/stats?all=true' % node_stats_suburl
     log('%s: GET %s' % (dt, node_stats_url))
+    node_stats_handler = urllib2.HTTPBasicAuthHandler(node_stats_authinfo)
+    node_stats_opener = urllib2.build_opener(node_stats_handler)
+    urllib2.install_opener(node_stats_opener)
+
     node_stats_data = urllib2.urlopen(node_stats_url).read()
+
     node_stats = json.loads(node_stats_data)
     node_stats_metrics = process_node_stats(args.prefix, node_stats)
     send_to_graphite(node_stats_metrics)
- 
+
     cluster_health_url = 'http://%s/_cluster/health?level=%s' % (get_es_host(), args.health_level)
     log('%s: GET %s' % (dt, cluster_health_url))
     cluster_health_data = urllib2.urlopen(cluster_health_url).read()
@@ -153,7 +172,7 @@ def get_metrics():
     indices_stats = json.loads(indices_stats_data)
     indices_stats_metrics = process_indices_stats(args.prefix, indices_stats)
     send_to_graphite(indices_stats_metrics)
-   
+
     if args.segments:
         segments_status_url = 'http://%s/_segments' % get_es_host()
         log('%s: GET %s' % (dt, segments_status_url))
@@ -173,8 +192,16 @@ if __name__ == '__main__':
     parser.add_argument('--segments', action='store_true', help='Collect low-level segment metrics.')
     parser.add_argument('-d', '--debug', action='store_true', help='Print metrics, don\'t send to graphite')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
+    parser.add_argument('-u', '--user', help='user for basic auth')
+    parser.add_argument('-p', '--password', help='password for basic auth')
     parser.add_argument('es', nargs='+', help='elasticsearch host:port', metavar='ES_HOST')
     args = parser.parse_args()
+    if args.user and args.password:
+        USER = args.user
+        PASSWORD = args.password
+    elif (args.user and not args.password) or (args.password and not args.user):
+        log('Must pass in both user and password')
+        sys.exit(1)
     while True:
         thread.start_new_thread(get_metrics, ())
         time.sleep(args.interval)
