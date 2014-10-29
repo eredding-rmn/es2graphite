@@ -133,7 +133,7 @@ def build_url_handler(suburl):
     do_something(output)
 
 
-def get_metrics(authSession):
+def get_metrics():
     dt = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     node_stats_suburl = '%s' % get_es_host()
     node_stats_authinfo = urllib2.HTTPPasswordMgrWithDefaultRealm()
