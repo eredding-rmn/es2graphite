@@ -193,7 +193,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--debug', action='store_true', help='Print metrics, don\'t send to graphite')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
     parser.add_argument('-u', '--user', help='user for basic auth')
-    parser.add_argument('-p', '--password', help='password for basic auth')
+    parser.add_argument('-P', '--password', help='password for basic auth')
     parser.add_argument('es', nargs='+', help='elasticsearch host:port', metavar='ES_HOST')
     args = parser.parse_args()
     if args.user and args.password:
